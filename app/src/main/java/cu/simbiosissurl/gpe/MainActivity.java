@@ -62,6 +62,8 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 
+import com.google.android.material.snackbar.Snackbar;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -93,11 +95,11 @@ public class MainActivity extends AppCompatActivity {
     Handler handler = new Handler(); // En esta zona creamos el objeto Handler
 
 
-    private String URLPrincipal = "https://gpetest.simbiosis-dg-apps.com";
+    private String URLPrincipal = "https://gpe.simbiosis-dg-apps.com";
     private String URLSaltoTutorial = "https://gpetest.simbiosis-dg-apps.com/menu.html";
     int detectError = 0;
     CircleImageView floatingActionButton;
-    private BroadcastReceiver UpdateRecirver = null;
+    private BroadcastReceiver updateRecirver = null;
 
     @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
     @Override
@@ -127,14 +129,15 @@ public class MainActivity extends AppCompatActivity {
 
                 }
                 NoVisibleFloating();
+
             }
         });
         webView = findViewById(R.id.webView);
-        //webView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
         webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
         // webView.addJavascriptInterface(new WebAppInterface(this), "Android");
         //WebSettings webSettings = webView.getSettings();
         WebSettings settings = webView.getSettings();
+        webView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
 
         if (isNetworkAvailable()) {
             webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
@@ -248,8 +251,9 @@ public class MainActivity extends AppCompatActivity {
                 if (url.startsWith("blob:")) {
                     webView.loadUrl(DownloadBlobFileJSInterface.getBase64StringFromBlobUrl(url));
                 }else {
-                    DownloadTask task = new DownloadTask();
-                    task.execute(url);
+//                    DownloadTask task = new DownloadTask();
+//                    task.execute(url);
+                    Log.e("contentLength",""+contentLength);
                 }
 
             }
@@ -259,113 +263,60 @@ public class MainActivity extends AppCompatActivity {
             ejecutarTareaPermisos();
         }
 
-//        UpdateRecirver = new UpdateRecirver();
-//        broadcastIntent();
+        updateRecirver = new UpdateRecirver();
+        broadcastIntent();
     }
 
 
+    public class UpdateRecirver extends BroadcastReceiver {
 
-
-
-    private class DownloadTask extends AsyncTask<String, Void, Void> {
-        // Pasar dos parámetros: URL y ruta de destino
-        private String url;
-        private String Filname = "imagen.png";
+        Context context;
 
 
         @Override
-        protected void onPreExecute() {
-            Toast a = Toast.makeText(getApplicationContext(), "Iniciar descarga", Toast.LENGTH_LONG);
-            a.show();
-            //log.info ("Iniciar descarga");
-        }
+        public void onReceive(Context context, Intent intent) {
 
-        @Override
-        protected Void doInBackground(String... params) {
-            //log.debug("doInBackground. url:{}, dest:{}", params[0], params[1]);
-            url = params[0];
-            //Filname = params[1];
-            try {
-                //String s = url.replaceAll(" " , "%20");
-                //Uri link = Uri.parse(s);
-                // DownloadManager.Request request = new DownloadManager.Request(link);
-                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-
-                // DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url.replace("blob:","")));
-                //  request.setMimeType(mime);
-                //request.setMimeType("application/json");
-                //String mime = "application/json";
-                String cookies = CookieManager.getInstance().getCookie(url);
-                request.addRequestHeader("cookie", cookies);
-                //request.addRequestHeader("User-Agent", userAgent);
-                request.setDescription("Downloading file...");
-                //request.addRequestHeader("mimetype", mimeType);
-
-                request.setTitle("Descargando archivo");
-
-                request.setAllowedOverMetered(true);
-                // Permitir que el registro sea visible en la interfaz de administración de descargas
-                request.setVisibleInDownloadsUi(true);
-                // Permitir la descarga en itinerancia
-                request.setAllowedOverRoaming(true);
-                //  String filename = URLUtil.guessFileName(url, params[1],mime);
-                // String filename = "mis-pacientes-seleccionados.gpexprt";
-                //File directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-
-                // new File(Environment.getExternalStorageDirectory() + "/Download/gpexprt").mkdirs();
-                //File file = new File(Environment.DIRECTORY_DOWNLOADS, filename);
-                //request.setDestinationInExternalFilesDir(MainActivity.this, Environment.DIRECTORY_DOWNLOADS + "/gpexprt", Filname);
-                request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS + "/gpe", Filname);
-                // request.setDestinationInExternalPublicDir(String.valueOf(directory), Filname);
-
-                // if (file.exists()) file.delete();
-                // request.setDestinationUri(Uri.fromFile(file));
-
-                //File file = new File( "/Download/gpexprt/");
-               /* request.setDestinationInExternalPublicDir(String.valueOf(file),
-                        filename +".gpexprt");*/
-
-                //String root = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString();//Downloads folder path
-
-                // request.setDestinationInExternalPublicDir(root,filename);
-                //request.allowScanningByMediaScanner();
-                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-
-                DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-                //dm.enqueue(request);
-                dm.enqueue(request);
-                // Log.d("downloadId:{}", "" +downloadId);
-
-                Toast.makeText(getApplicationContext(), "Downloading File", Toast.LENGTH_LONG).show();
+            ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            @SuppressLint("MissingPermission") NetworkInfo activeNetInfo = connectivityManager.getActiveNetworkInfo();
+            boolean isConnected = activeNetInfo != null && activeNetInfo.isConnectedOrConnecting();
+            if (isConnected) {
+                // Toast.makeText(context, "Conectado "+ isConnected,
+                //        Toast.LENGTH_LONG).show();
+                Log.i("NET", "Not Connected" + isConnected);
 
 
-            } catch (Exception e) {
-
-                if (ContextCompat.checkSelfPermission(MainActivity.this,
-                        android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                        != PackageManager.PERMISSION_GRANTED) {
-                    // Should we show an explanation?
-                    if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
-                            android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                        Toast.makeText(getBaseContext(), "첨부파일 다운로드를 위해\n동의가 필요합니다.", Toast.LENGTH_LONG).show();
-                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                                110);
-                    } else {
-                        Toast.makeText(getBaseContext(), "첨부파일 다운로드를 위해\n동의가 필요합니다.", Toast.LENGTH_LONG).show();
-                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                                110);
+            } else {
+                // Create the Snackbar
+                View parentLayout = findViewById(android.R.id.content);
+                Snackbar snackbar = Snackbar.make(parentLayout, R.string.no_internet_conection, Snackbar.LENGTH_INDEFINITE);
+                snackbar.setAction("Cerrar", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        snackbar.dismiss();
                     }
-                }
+                });
+
+
+// Get the Snackbar's layout view
+                Snackbar.SnackbarLayout layout = (Snackbar.SnackbarLayout) snackbar.getView();
+//If the view is not covering the whole snackbar layout, add this line
+                layout.setPadding(1, 1, 1, 1);
+
+// Show the Snackbar
+                snackbar.show();
+//            Toast.makeText(context, "¡Parece que no estás conectado a Internet!. Pueden existir páginas " +
+//                            "no guardadas en cache que necesiten de conexion a intennet ",
+//                    Toast.LENGTH_LONG).show();
+//            Log.i("NET", "Not Connected" + isConnected);
+
             }
-            return null;
+
+
         }
+    }
 
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            registerReceiver(onComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
-        }
-
-
+    public void broadcastIntent() {
+        registerReceiver(updateRecirver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
     }
 
     BroadcastReceiver onComplete = new BroadcastReceiver() {
@@ -1078,6 +1029,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onClick(DialogInterface dialogInterface, int i) {
                         finish();
                         dialogInterface.dismiss();
+                        NoVisibleFloating();
                         Toast.makeText(getApplicationContext(), "Cerrando la Aplicacion",
                                 Toast.LENGTH_LONG).show();
                     }
@@ -1086,7 +1038,6 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         dialogInterface.cancel();
-
                     }
                 }).show();
 
@@ -1150,8 +1101,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Active WebView para que esté activo, y la respuesta de la página web se puede ejecutar normalmente
         webView.onResume();
+        // Active WebView para que esté activo, y la respuesta de la página web se puede ejecutar normalmente
+        try {
+            getApplicationContext().registerReceiver(updateRecirver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+        } catch (Exception e) {
+            // already registered
+        }
+
+
     }
 
     @Override
@@ -1160,11 +1118,35 @@ public class MainActivity extends AppCompatActivity {
         // Cuando la página pierde el foco y cambia al estado invisible de fondo, debe ejecutar onPause
         // Mediante la acción onPause para notificar al kernel que pause todas las acciones, como el análisis del DOM, la ejecución de complementos y la ejecución de JavaScript.
         webView.onPause();
+        try {
+            if (updateRecirver != null) {
+                unregisterReceiver(updateRecirver);
+                updateRecirver = null;
+            }
+        } catch (Exception e) {
+            // already unregistered
+        }
         super.onPause();
     }
 
+    @Override
+    public void onStop() {
+        try {
+            getApplicationContext().unregisterReceiver(updateRecirver);
+        } catch (Exception e) {
+            // already unregistered
+        }
+        super.onStop();
+    }
+
+    @Override
     protected void onDestroy() {
-        super.onDestroy();
+
+        if(updateRecirver !=null){
+            getApplicationContext().unregisterReceiver(updateRecirver);
+            //this.updateRecirver = null;
+        }
+
         if (webView != null) {
             webView.setWebViewClient(null);
             webView.setWebChromeClient(null);
@@ -1178,7 +1160,9 @@ public class MainActivity extends AppCompatActivity {
             webView.destroy();
             webView = null;
         }
+        super.onDestroy();
     }
+
     //@Override
 //    protected void onDestroy() {
 //        super.onDestroy();
